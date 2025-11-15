@@ -208,7 +208,7 @@ export default function NoteApp() {
           </div>
 
           {/* Add Note Input */}
-          <div className="flex gap-3 mb-10">
+          <div className="flex flex-col md:flex-row gap-3 mb-10 ">
             <input
               type="text"
               placeholder="Write a note..."
