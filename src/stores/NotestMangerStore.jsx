@@ -25,6 +25,35 @@ export const useTodoStore = create(
             note.id === id ? { ...note, text: newText } : note
           ),
         })),
+
+
+        tasks: [],
+
+        addTask: (task) => 
+          set((state) => ({
+            tasks: [
+              ...state.tasks,
+              {
+                id: Date.now(),
+                title : task.title,
+                completed: false
+              }
+            ]
+          })),
+
+          removeTask : (id) => 
+            set((state) => ({
+              tasks : state.tasks.filter((task) => task.id !== id)
+            })),
+
+            toggleTask : (id) => 
+              set((state) => ({
+                tasks : state.tasks.map((task) =>
+                task.id === id ? {...task , completed : !task.completed} : task
+                )
+              })),
+
+
     }),
     {
       name: "notes-storage", // اسم التخزين في localStorage

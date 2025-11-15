@@ -47,7 +47,7 @@ const getPreviewText = (text) => {
 };
 
 export default function NoteApp() {
-  const { notes, addNote, removeNote, updateNote } = useTodoStore();
+  const { notes, addNote, removeNote, updateNote, tasks, addTask, removeTask, toggleTask } = useTodoStore();
 
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
@@ -55,6 +55,7 @@ export default function NoteApp() {
   const [editText, setEditText] = useState("");
   const [toast, setToast] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
+  const [activeTab, setActiveTab] = useState("notes");
 
   const showToast = (message, type) => {
     setToast({ message, type });
@@ -66,11 +67,22 @@ export default function NoteApp() {
     )
     .sort((a, b) => b.id - a.id);
 
+  const filteredTasks = tasks
+    .filter((task) =>
+      task.title.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => b.id - a.id);
+
   const handleAdd = () => {
     if (!input.trim()) return;
-    addNote(input.trim());
+    if (activeTab === "notes") {
+      addNote(input.trim());
+      showToast("Note created successfully", "success");
+    } else {
+      addTask({ title: input.trim() });
+      showToast("Task created successfully", "success");
+    }
     setInput("");
-    showToast("Note created successfully", "success");
   };
 
   const startEdit = (note) => {
@@ -103,6 +115,11 @@ export default function NoteApp() {
     setEditingId(null);
   };
 
+  const handleToggle = (id) => {
+    toggleTask(id);
+    showToast("Task Completed" , "success");
+  }
+
   return (
     <>
       {/* Toast Notification */}
@@ -127,7 +144,7 @@ export default function NoteApp() {
           >
             {/* Header with icons */}
             <div className="flex items-center justify-between px-4 pt-4 pb-3">
-              <h1 className="text-3xl font-bold">Notes</h1>
+              <h1 className="text-3xl font-bold">{activeTab === "notes" ? "Notes" : "Tasks"}</h1>
               <div className="flex gap-4">
                 <button className="p-2">
                   <FolderOpen size={24} className="text-white" />
@@ -149,7 +166,7 @@ export default function NoteApp() {
                 />
                 <input
                   type="text"
-                  placeholder="Search notes"
+                  placeholder={activeTab === "notes" ? "Search notes" : "Search tasks"}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full bg-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none text-white placeholder-gray-500"
@@ -157,11 +174,11 @@ export default function NoteApp() {
               </div>
             </div>
 
-            {/* Add Note Input */}
+            {/* Add Note/Task Input */}
             <div className="px-4 pb-4">
               <input
                 type="text"
-                placeholder="Write a note..."
+                placeholder={activeTab === "notes" ? "Write a note..." : "Write a task..."}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAdd()}
@@ -169,58 +186,124 @@ export default function NoteApp() {
               />
             </div>
 
-            {/* Notes Grid */}
+            {/* Notes/Tasks Grid */}
             <div className="flex-1 overflow-y-auto px-4">
-              {filteredNotes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-zinc-500">
-                  <p className="text-sm">
-                    {search ? "No notes found" : "Start by adding your first note!"}
-                  </p>
-                </div>
+              {activeTab === "notes" ? (
+                // Notes View
+                filteredNotes.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-zinc-500">
+                    <p className="text-sm">
+                      {search ? "No notes found" : "Start by adding your first note!"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 pb-4">
+                    {filteredNotes.map((note) => {
+                      const lines = note.text.split('\n').filter(line => line.trim());
+                      const title = lines[0] || "No title";
+                      const subject = lines.slice(1).join('\n') || "No text";
+                      
+                      return (
+                        <button
+  key={note.id}
+  onClick={() => handleSelectNote(note)}
+  className="bg-zinc-900 rounded-2xl p-4 text-left hover:bg-zinc-800 transition h-40 flex flex-col fade-in slide-in"
+>
+
+                          <h3 className="font-semibold text-base mb-2 line-clamp-1">
+                            {title}
+                          </h3>
+                          <p className="text-sm text-gray-400 flex-1 line-clamp-3 mb-2">
+                            {subject}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(note.id)}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
-                <div className="grid grid-cols-2 gap-3 pb-4">
-                  {filteredNotes.map((note) => {
-                    const lines = note.text.split('\n').filter(line => line.trim());
-                    const title = lines[0] || "No title";
-                    const subject = lines.slice(1).join('\n') || "No text";
-                    
-                    return (
-                      <button
-                        key={note.id}
-                        onClick={() => handleSelectNote(note)}
-                        className="bg-zinc-900 rounded-2xl p-4 text-left hover:bg-zinc-800 transition h-40 flex flex-col"
-                      >
-                        <h3 className="font-semibold text-base mb-2 line-clamp-1">
-                          {title}
-                        </h3>
-                        <p className="text-sm text-gray-400 flex-1 line-clamp-3 mb-2">
-                          {subject}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatDate(note.id)}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
+                // Tasks View
+                filteredTasks.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-zinc-500">
+                    <p className="text-sm">
+                      {search ? "No tasks found" : "Start by adding your first task!"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 pb-4">
+                    {filteredTasks.map((task) => (
+                     <div
+  key={task.id}
+  className="bg-zinc-900 rounded-xl p-4 flex items-center gap-3 hover:bg-zinc-800 transition fade-in slide-in"
+>
+
+                        <button
+                          onClick={() => handleToggle(task.id)}
+                          className="flex-shrink-0"
+                        >
+                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                            task.completed ? "bg-yellow-500 border-yellow-500" : "border-gray-500"
+                          }`}>
+                            {task.completed && (
+                              <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </button>
+                        <span className={`flex-1 ${task.completed ? "line-through text-gray-500" : "text-white"}`}>
+                          {task.title}
+                        </span>
+                        <button
+                          onClick={() => {
+                            removeTask(task.id);
+                            showToast("Task deleted", "error");
+                          }}
+                          className="p-2 hover:bg-zinc-700 rounded-lg text-red-500"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
               )}
             </div>
 
             {/* Bottom Navigation */}
             <div className="bg-black border-t border-zinc-800 px-6 py-3 flex items-center justify-around">
-              <button className="flex flex-col items-center gap-1">
+              <button 
+                onClick={() => setActiveTab("notes")}
+                className="flex flex-col items-center gap-1"
+              >
                 <div className="w-6 h-6 flex items-center justify-center">
-                  <div className="w-5 h-6 border-2 border-yellow-500 rounded-sm"></div>
+                  <div className={`w-5 h-6 border-2 rounded-sm ${
+                    activeTab === "notes" ? "border-yellow-500" : "border-zinc-500"
+                  }`}></div>
                 </div>
-                <span className="text-xs text-yellow-500">Notes</span>
+                <span className={`text-xs ${
+                  activeTab === "notes" ? "text-yellow-500" : "text-zinc-500"
+                }`}>Notes</span>
               </button>
-              <button className="flex flex-col items-center gap-1 text-zinc-500">
+              <button 
+                onClick={() => setActiveTab("tasks")}
+                className="flex flex-col items-center gap-1"
+              >
                 <div className="w-6 h-6 flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-zinc-500 rounded-sm relative">
-                    <div className="absolute inset-1 border-t-2 border-zinc-500"></div>
+                  <div className={`w-5 h-5 border-2 rounded-sm relative ${
+                    activeTab === "tasks" ? "border-yellow-500" : "border-zinc-500"
+                  }`}>
+                    <div className={`absolute inset-1 border-t-2 ${
+                      activeTab === "tasks" ? "border-yellow-500" : "border-zinc-500"
+                    }`}></div>
                   </div>
                 </div>
-                <span className="text-xs">Tasks</span>
+                <span className={`text-xs ${
+                  activeTab === "tasks" ? "text-yellow-500" : "text-zinc-500"
+                }`}>Tasks</span>
               </button>
             </div>
           </div>
@@ -315,10 +398,6 @@ export default function NoteApp() {
         >
           <Plus size={28} className="text-black" />
         </button>
-
-        {/* Add Note Input - Fixed at top when not viewing note */}
-        
-        
       </div>
     </>
   );
