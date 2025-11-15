@@ -7,6 +7,7 @@ import {
   X,
   Trash2,
   ChevronLeft,
+  FolderOpen,
 } from "lucide-react";
 import { useTodoStore } from "./NotestMangerStore";
 
@@ -34,29 +35,15 @@ const Toast = ({ message, type, onClose }) => {
 // Format Date Function
 const formatDate = (timestamp) => {
   const date = new Date(timestamp);
-  const now = new Date();
-  const diffTime = Math.abs(now - date);
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
   const months = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
   ];
-
-  if (diffDays === 0) {
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    return `${hours}:${minutes}`;
-  } else if (diffDays < 7) {
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    return days[date.getDay()];
-  } else {
-    return `${months[date.getMonth()]} ${date.getDate()}`;
-  }
+  return `${months[date.getMonth()]} ${date.getDate()}`;
 };
 
 const getPreviewText = (text) => {
-  return text.length > 80 ? text.substring(0, 80) + "..." : text;
+  return text.length > 60 ? text.substring(0, 60) + "..." : text;
 };
 
 export default function NoteApp() {
@@ -129,25 +116,35 @@ export default function NoteApp() {
 
       {/* Main Container */}
       <div className="h-screen bg-black text-white flex flex-col">
-        {/* Status Bar */}
-       
-
+      
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
           {/* List View */}
           <div
             className={`${
               selectedNote || editingId ? "hidden md:flex" : "flex"
-            } flex-col w-full md:w-96 bg-zinc-900 border-r border-zinc-800`}
+            } flex-col w-full bg-black`}
           >
-            {/* Header */}
-            <div className="p-4 pb-2">
-              <h1 className="text-3xl font-bold mb-4">Notes</h1>
+            {/* Header with icons */}
+            <div className="flex items-center justify-between px-4 pt-4 pb-3">
+              <h1 className="text-3xl font-bold">Notes</h1>
+              <div className="flex gap-4">
+                <button className="p-2">
+                  <FolderOpen size={24} className="text-white" />
+                </button>
+                <button className="p-2">
+                  <div className="w-6 h-6 border-2 border-white rounded-full flex items-center justify-center">
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  </div>
+                </button>
+              </div>
+            </div>
 
-              {/* Search */}
-              <div className="relative mb-3">
+            {/* Search */}
+            <div className="px-4 pb-3">
+              <div className="relative">
                 <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
                   size={18}
                 />
                 <input
@@ -155,13 +152,25 @@ export default function NoteApp() {
                   placeholder="Search notes"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none"
+                  className="w-full bg-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none text-white placeholder-gray-500"
                 />
               </div>
             </div>
 
-            {/* Notes List */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Add Note Input */}
+            <div className="px-4 pb-4">
+              <input
+                type="text"
+                placeholder="Write a note..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                className="w-full px-4 py-3 rounded-xl bg-zinc-800 text-white outline-none placeholder-gray-500"
+              />
+            </div>
+
+            {/* Notes Grid */}
+            <div className="flex-1 overflow-y-auto px-4">
               {filteredNotes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-zinc-500">
                   <p className="text-sm">
@@ -169,37 +178,57 @@ export default function NoteApp() {
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-zinc-800">
-                  {filteredNotes.map((note) => (
-                    <button
-                      key={note.id}
-                      onClick={() => handleSelectNote(note)}
-                      className={`w-full text-left p-4 hover:bg-zinc-800 transition ${
-                        selectedNote?.id === note.id ? "bg-zinc-800" : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-1">
-                        <h3 className="font-semibold text-base line-clamp-1">
-                          {note.text.split('\n')[0] || "No title"}
+                <div className="grid grid-cols-2 gap-3 pb-4">
+                  {filteredNotes.map((note) => {
+                    const lines = note.text.split('\n').filter(line => line.trim());
+                    const title = lines[0] || "No title";
+                    const subject = lines.slice(1).join('\n') || "No text";
+                    
+                    return (
+                      <button
+                        key={note.id}
+                        onClick={() => handleSelectNote(note)}
+                        className="bg-zinc-900 rounded-2xl p-4 text-left hover:bg-zinc-800 transition h-40 flex flex-col"
+                      >
+                        <h3 className="font-semibold text-base mb-2 line-clamp-1">
+                          {title}
                         </h3>
-                        <span className="text-xs text-zinc-500 ml-2 flex-shrink-0">
+                        <p className="text-sm text-gray-400 flex-1 line-clamp-3 mb-2">
+                          {subject}
+                        </p>
+                        <p className="text-xs text-gray-500">
                           {formatDate(note.id)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-zinc-400 line-clamp-2">
-                        {getPreviewText(note.text)}
-                      </p>
-                    </button>
-                  ))}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
+            </div>
+
+            {/* Bottom Navigation */}
+            <div className="bg-black border-t border-zinc-800 px-6 py-3 flex items-center justify-around">
+              <button className="flex flex-col items-center gap-1">
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <div className="w-5 h-6 border-2 border-yellow-500 rounded-sm"></div>
+                </div>
+                <span className="text-xs text-yellow-500">Notes</span>
+              </button>
+              <button className="flex flex-col items-center gap-1 text-zinc-500">
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-zinc-500 rounded-sm relative">
+                    <div className="absolute inset-1 border-t-2 border-zinc-500"></div>
+                  </div>
+                </div>
+                <span className="text-xs">Tasks</span>
+              </button>
             </div>
           </div>
 
           {/* Detail/Edit View */}
           <div
             className={`${
-              selectedNote || editingId ? "flex" : "hidden md:flex"
+              selectedNote || editingId ? "flex" : "hidden"
             } flex-col flex-1 bg-black`}
           >
             {selectedNote || editingId ? (
@@ -275,60 +304,21 @@ export default function NoteApp() {
                   </div>
                 </div>
               </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-zinc-600">
-                <div className="text-center">
-                  <p className="text-lg mb-2">No note selected</p>
-                  <p className="text-sm">Select a note or create a new one</p>
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
 
-        {/* Add Note Input (Always visible at bottom on mobile) */}
-        {!selectedNote && !editingId && (
-          <div className="md:hidden p-4 bg-zinc-900 border-t border-zinc-800">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Write a note..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                className="flex-1 px-4 py-3 rounded-xl bg-zinc-800 text-white outline-none"
-              />
-              <button
-                onClick={handleAdd}
-                className="px-4 py-3 rounded-xl bg-yellow-500 text-black font-semibold hover:bg-yellow-400"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Floating Action Button */}
+        <button
+          onClick={handleAdd}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-yellow-500 rounded-full shadow-lg flex items-center justify-center hover:bg-yellow-400 transition z-50"
+        >
+          <Plus size={28} className="text-black" />
+        </button>
 
-        {/* Add Note Input (Desktop - in sidebar) */}
-        {!selectedNote && !editingId && (
-          <div className="hidden md:block p-4 bg-zinc-900 border-t border-zinc-800">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Write a note..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                className="flex-1 px-4 py-3 rounded-xl bg-zinc-800 text-white outline-none"
-              />
-              <button
-                onClick={handleAdd}
-                className="px-4 py-3 rounded-xl bg-yellow-500 text-black font-semibold hover:bg-yellow-400"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Add Note Input - Fixed at top when not viewing note */}
+        
+        
       </div>
     </>
   );
