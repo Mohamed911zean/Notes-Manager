@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import SignUp from './Components/auth/Signup-form.jsx';
 import NotesApp from './Components/NotesManger.jsx'
 import Login from './Components/auth/Login-form.jsx'
+import TimeManager from "./Components/TimeManager.jsx";
 const App = () => {
   return (
    <>
@@ -12,6 +13,7 @@ const App = () => {
       <Route path="/signup" element={<SignUp />} />
       <Route path="/login" element={<Login />} />
       <Route path="/notes" element={<NotesApp />} />
+      <Route path="/time-manager" element={<TimeManager />} />
     </Routes>
       
     </>
