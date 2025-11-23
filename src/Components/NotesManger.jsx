@@ -133,7 +133,7 @@ export default function NotesManger() {
       )}
 
       {/* Main Container */}
-      <div className="h-screen bg-black text-white flex flex-col">
+      <div className="h-screen  bg-black text-white flex flex-col">
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
           {/* List View */}
@@ -329,10 +329,10 @@ export default function NotesManger() {
             )}
 
             {/* Bottom Navigation */}
-            <div className="bg-black border-t border-zinc-800 px-6 py-3 flex items-center justify-around mb-9">
+            <div className="bg-black border-t border-zinc-800 px-6 py-3 flex items-center justify-around mb-14">
               <button
                 onClick={() => setActiveTab("notes")}
-                className="flex flex-col items-center gap-1"
+                className="flex flex-col items-center gap-1 cursor-pointer"
               >
                 <div className="w-6 h-6 flex items-center justify-center">
                   <div
@@ -354,7 +354,7 @@ export default function NotesManger() {
 
               <button
                 onClick={() => setActiveTab("tasks")}
-                className="flex flex-col items-center gap-1"
+                className="flex flex-col items-center gap-1 cursor-pointer"
               >
                 <div className="w-6 h-6 flex items-center justify-center">
                   <div
@@ -384,7 +384,7 @@ export default function NotesManger() {
 
               <button
                 onClick={() => setActiveTab("clock")}
-                className="flex flex-col items-center gap-1"
+                className="flex flex-col items-center gap-1 cursor-pointer"
               >
                 <div className="w-6 h-6 flex items-center justify-center">
                   <div
