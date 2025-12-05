@@ -209,7 +209,7 @@ export default function ClockView() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass border-b border-zinc-800/50 px-4 py-3 flex items-center justify-around"
+        className="glass border-b border-zinc-800/50 px-4 py-3 flex items-center justify-around w-auto"
       >
         <motion.button
           whileHover={{ scale: 1.05 }}
