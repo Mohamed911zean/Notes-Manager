@@ -126,6 +126,53 @@ export const useTimeManagerStore = create(
 
         return triggered;
       },
+
+      ///////////////////////////////
+      ////// POMODORO ANALYTICS ////
+      ///////////////////////////////
+      pomodoroSessions: [],
+
+      addPomodoroSession: (duration) =>
+        set((state) => {
+          const date = new Date().toISOString().split("T")[0];
+          return {
+            pomodoroSessions: [
+              ...state.pomodoroSessions,
+              { id: Date.now(), duration, date },
+            ],
+          };
+        }),
+
+      getTodayPomodoroSessions: () => {
+        const today = new Date().toISOString().split("T")[0];
+        return get().pomodoroSessions.filter((s) => s.date === today);
+      },
+
+      getTotalPomodoroToday: () => {
+        return get()
+          .getTodayPomodoroSessions()
+          .reduce((sum, s) => sum + s.duration, 0);
+      },
+
+      getPomodoroCountToday: () => {
+        return get().getTodayPomodoroSessions().length;
+      },
+
+      getAveragePomodoroToday: () => {
+        const sessions = get().getTodayPomodoroSessions();
+        if (!sessions.length) return 0;
+        return get().getTotalPomodoroToday() / sessions.length;
+      },
+
+      getWeekPomodoroTotal: () => {
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 6);
+
+        return get()
+          .pomodoroSessions.filter((s) => new Date(s.date) >= weekAgo)
+          .reduce((sum, s) => sum + s.duration, 0);
+      },
     }),
     {
       name: "time-manager-storage",
