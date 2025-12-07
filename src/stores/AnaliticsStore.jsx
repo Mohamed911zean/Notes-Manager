@@ -35,48 +35,57 @@ const calculateWeeklyData = (sessions) => {
   return data;
 };
 
+const now = new Date();
+
 export const useAnalyticsStore = create(
   persist(
     (set, get) => ({
       sessions: [],
       weeklyData: [],
-      currentSessionStart: null, // timestamp
+      
+      currentSessionStart: now, // timestamp
 
       // Start a session
       startSession: () => {
-        if (!get().currentSessionStart) {
-          set({ currentSessionStart: Date.now() });
-        }
-      },
+  if (!get().currentSessionStart) {
+    set({ currentSessionStart: Date.now() });
+  }
+
+  console.log("START called at:", Date.now());
+},
+
 
       // End a session
       endSession: () => {
-        const start = get().currentSessionStart;
-        if (!start) return;
+  const start = get().currentSessionStart;
+  if (!start) return;
 
-        const end = Date.now();
-        const duration = Math.floor((end - start) / 1000); // in seconds
-        const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const end = Date.now();
+  const duration = Math.floor((end - start) / 1000); // seconds
+  const date = new Date().toISOString().split("T")[0];
 
-        set(state => {
-          const updatedSessions = [
-            ...state.sessions,
-            {
-              id: Date.now(),
-              start,
-              end,
-              duration,
-              date,
-            },
-          ];
-
-          return {
-            currentSessionStart: null,
-            sessions: updatedSessions,
-            weeklyData: calculateWeeklyData(updatedSessions),
-          };
-        });
+  set(state => {
+    const updatedSessions = [
+      ...state.sessions,
+      {
+        id: Date.now(),
+        start,
+        end,
+        duration,
+        date,
       },
+    ];
+
+    console.log("END called at:", Date.now());
+
+    return {
+      currentSessionStart: null,
+      sessions: updatedSessions,
+      weeklyData: calculateWeeklyData(updatedSessions),
+    };
+  });
+},
+
 
       // Get sessions for today
       getTodaySessions: () => {
@@ -116,3 +125,4 @@ export const useAnalyticsStore = create(
     }
   )
 );
+

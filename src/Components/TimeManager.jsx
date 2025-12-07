@@ -101,44 +101,55 @@ useEffect(() => {
     if (t.remaining === 0 && t.isRunning) {
       playTimerEnd();
       toast.success("⏰ Timer completed!");
-      
-      // Save session to analytics ← هنا الإضافة
-      startSession();
-      endSession();      
+
+      // End session when timer finishes
+      endSession();
       setTimeout(() => removeTimer(t.id), 100);
     }
   });
-}, [timers, playTimerEnd, removeTimer, startSession, endSession]);
+}, [timers, playTimerEnd, removeTimer, endSession]);
 
-  // Timer control
-  const handleQuickTimer = (minutes) => {
-    playClick();
-    addTimer({ duration: minutes * 60, isRunning: true });
-    toast.success(`${minutes} min timer started!`);
-  };
+// Timer control
+const handleQuickTimer = (minutes) => {
+  playClick();
+  addTimer({ duration: minutes * 60, isRunning: true });
 
-  const handleCustomTimer = () => {
-    playClick();
-    setShowCustomTimerModal(true);
-  };
+  // Start session at the beginning of the timer
+  startSession();
 
-  const handleSaveCustomTimer = () => {
-    const totalSeconds = customHours * 3600 + customMinutes * 60 + customSeconds;
-    if (totalSeconds > 0) {
-      addTimer({ duration: totalSeconds, isRunning: true });
-      toast.success("Custom timer started!");
-      setShowCustomTimerModal(false);
-      setCustomHours(0);
-      setCustomMinutes(5);
-      setCustomSeconds(0);
-    }
-  };
+  toast.success(`${minutes} min timer started!`);
+};
 
-  const handleCancelTimer = (id) => {
-    playClick();
-    removeTimer(id);
-    toast("Timer cancelled");
-  };
+const handleCustomTimer = () => {
+  playClick();
+  setShowCustomTimerModal(true);
+};
+
+const handleSaveCustomTimer = () => {
+  const totalSeconds = customHours * 3600 + customMinutes * 60 + customSeconds;
+  if (totalSeconds > 0) {
+    addTimer({ duration: totalSeconds, isRunning: true });
+
+    // Start session at the beginning of the custom timer
+    startSession();
+
+    toast.success("Custom timer started!");
+    setShowCustomTimerModal(false);
+    setCustomHours(0);
+    setCustomMinutes(5);
+    setCustomSeconds(0);
+  }
+};
+
+const handleCancelTimer = (id) => {
+  playClick();
+
+  // End session if timer is cancelled
+  endSession();
+
+  removeTimer(id);
+  toast("Timer cancelled");
+};
 
   // Stopwatch control
   const handleStopwatchStartStop = () => {
