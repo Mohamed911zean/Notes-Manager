@@ -8,18 +8,21 @@ import {
   Trash2,
   ChevronLeft,
   FolderOpen,
+  LogOut,
 } from "lucide-react";
 import { useTodoStore } from "../stores/NotestMangerStore";
-import ClockView from "./TimeManager"
-import AnalyticsManager from "./AnailticsManager"
+import ClockView from "./TimeManager";
+import AnalyticsManager from "./AnailticsManager";
+import WeeklyOverview from "./TasksManager.jsx";
+import DayTasksView from "./DailyTasksView.jsx";
 import { auth } from "../lib/firebase.ts";
 import { signOut } from "firebase/auth";
 import Cookies from "js-cookie";
-import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNotesStore } from "../stores/useNotesStore.jsx";
 
-// Simplified Toast Component - No shadow/blur
+// Toast Component
 const Toast = ({ message, type, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -54,8 +57,8 @@ const formatDate = (timestamp) => {
   return `${months[date.getMonth()]} ${date.getDate()}`;
 };
 
-export default function NotesManger() {
-  const { notes, addNote, removeNote, updateNote, tasks, addTask, removeTask, toggleTask } = useTodoStore();
+export default function NotesManager() {
+  const { notes, addNote, removeNote, updateNote } = useNotesStore();
 
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
@@ -65,6 +68,7 @@ export default function NotesManger() {
   const [selectedNote, setSelectedNote] = useState(null);
   const [activeTab, setActiveTab] = useState("notes");
   const [showInputModal, setShowInputModal] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
 
   const showToast = (message, type) => {
     setToast({ message, type });
@@ -86,25 +90,12 @@ export default function NotesManger() {
     .filter((note) => note.text.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => b.id - a.id);
 
-  const filteredTasks = tasks
-    .filter((task) => task.title.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => b.id - a.id);
-
   const handleAdd = () => {
     if (!input.trim()) return;
-    if (activeTab === "notes") {
-      addNote(input.trim());
-      showToast("Note created successfully", "success");
-    } else if (activeTab === "tasks") {
-      addTask({ title: input.trim() });
-      showToast("Task created successfully", "success");
-    }
+    addNote(input.trim());
+    showToast("Note created successfully", "success");
     setInput("");
     setShowInputModal(false);
-  };
-
-  const handleOpenInputModal = () => {
-    setShowInputModal(true);
   };
 
   const startEdit = (note) => {
@@ -137,11 +128,6 @@ export default function NotesManger() {
     setEditingId(null);
   };
 
-  const handleToggle = (id) => {
-    toggleTask(id);
-    showToast("Task Completed", "success");
-  };
-
   return (
     <>
       {/* Toast Notification */}
@@ -155,7 +141,7 @@ export default function NotesManger() {
         )}
       </AnimatePresence>
 
-      {/* Input Modal - No shadow/blur */}
+      {/* Input Modal */}
       <AnimatePresence>
         {showInputModal && (
           <motion.div
@@ -175,9 +161,7 @@ export default function NotesManger() {
               className="w-full max-w-lg glass rounded-3xl p-6 border border-zinc-800/50"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold gradient-text">
-                  {activeTab === "notes" ? "New Note" : "New Task"}
-                </h2>
+                <h2 className="text-xl font-semibold gradient-text">New Note</h2>
                 <button
                   onClick={() => setShowInputModal(false)}
                   className="p-2 hover:bg-zinc-800/70 rounded-lg text-zinc-400 transition-colors"
@@ -195,11 +179,7 @@ export default function NotesManger() {
                     handleAdd();
                   }
                 }}
-                placeholder={
-                  activeTab === "notes"
-                    ? "Write your note here..."
-                    : "What do you need to do?"
-                }
+                placeholder="Write your note here..."
                 className="w-full h-48 px-4 py-3 rounded-xl glass text-white outline-none placeholder-zinc-500 border border-zinc-800/50 focus:border-yellow-500/50 transition-all duration-300 resize-none mb-4"
               />
 
@@ -208,7 +188,7 @@ export default function NotesManger() {
                   onClick={handleAdd}
                   className="flex-1 py-3 bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-xl text-black font-semibold hover:brightness-110 transition-all duration-300"
                 >
-                  {activeTab === "notes" ? "Create Note" : "Add Task"}
+                  Create Note
                 </button>
                 <button
                   onClick={() => setShowInputModal(false)}
@@ -232,71 +212,76 @@ export default function NotesManger() {
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
           {/* List View */}
-          <div
-            className={`${
-              selectedNote || editingId ? "hidden md:flex" : "flex"
-            } flex-col w-full`}
-          >
-            {/* Clock View */}
-           {activeTab === "clock" ? (
-  <>
-    <div className="flex items-center justify-between px-6 pt-6 pb-4 bg-black sticky top-0 z-10">
-      <h1 className="text-3xl font-bold gradient-text">Clock</h1>
-      <div className="flex gap-3">
-        <button
-          onClick={handleLogout}
-          className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl hover:brightness-110 transition-all duration-300"
-        >
-          <LogOut size={18} />
-        </button>
-      </div>
-    </div>
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <ClockView />
-    </div>
-  </>
-) : activeTab === "analytics" ? (
-  <>
-    <div className="flex items-center justify-between px-6 pt-6 pb-4 bg-black sticky top-0 z-10">
-      <h1 className="text-3xl font-bold gradient-text">Analytics</h1>
-      <div className="flex gap-3">
-        <button
-          onClick={handleLogout}
-          className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl  "
-        >
-          <LogOut size={18} />
-        </button>
-      </div>
-    </div>
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <AnalyticsManager />
-    </div>
-  </>
-) : (
-  <>
-    {/* Header */}
-    <div className="flex items-center justify-between px-6 pt-6 pb-4 bg-black sticky top-0 z-10">
-      {activeTab === "notes" ? (
-        <h1 className="text-3xl font-bold gradient-text flex items-center gap-2">
-          Notes
-        </h1>
-      ) : (
-        <h1 className="text-3xl font-bold gradient-text flex items-center gap-2">
-          Tasks
-        </h1>
-      )}
-      <div className="flex gap-3">
-        <button
-          onClick={handleLogout}
-          className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl hover:brightness-110 transition-all duration-300"
-        >
-          <LogOut size={18} />
-        </button>
-      </div>
-    </div>
+          <div className="flex flex-col w-full">
+            {activeTab === "clock" ? (
+              <>
+                <div className="flex items-center justify-between px-6 pt-6 pb-4 bg-black sticky top-0 z-10">
+                  <h1 className="text-3xl font-bold gradient-text">Clock</h1>
+                  <button
+                    onClick={handleLogout}
+                    className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl hover:brightness-110 transition-all duration-300"
+                  >
+                    <LogOut size={18} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <ClockView />
+                </div>
+              </>
+            ) : activeTab === "tasks" ? (
+              <>
+                {!selectedDay ? (
+                  <div className="flex flex-col h-full">
+                    <div className="flex items-center justify-between px-6 pt-6 pb-4 bg-black z-10">
+                      <h1 className="text-3xl font-bold gradient-text">Tasks</h1>
+                      <button
+                        onClick={handleLogout}
+                        className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl hover:brightness-110 transition-all duration-300"
+                      >
+                        <LogOut size={18} />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                      <WeeklyOverview onDaySelect={(day) => setSelectedDay(day)} />
+                    </div>
+                  </div>
+                ) : (
+                  <DayTasksView 
+                    day={selectedDay} 
+                    onBack={() => setSelectedDay(null)} 
+                  />
+                )}
+              </>
+            ) : activeTab === "analytics" ? (
+              <>
+                <div className="flex items-center justify-between px-6 pt-6 pb-4 bg-black sticky top-0 z-10">
+                  <h1 className="text-3xl font-bold gradient-text">Analytics</h1>
+                  <button
+                    onClick={handleLogout}
+                    className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl"
+                  >
+                    <LogOut size={18} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <AnalyticsManager />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Header */}
+                <div className={`${selectedNote || editingId ? "hidden md:flex" : "flex"} items-center justify-between px-6 pt-6 pb-4 bg-black sticky top-0 z-10`}>
+                  <h1 className="text-3xl font-bold gradient-text">Notes</h1>
+                  <button
+                    onClick={handleLogout}
+                    className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl hover:brightness-110 transition-all duration-300"
+                  >
+                    <LogOut size={18} />
+                  </button>
+                </div>
 
                 {/* Search */}
-                <div className="px-6 pb-4">
+                <div className={`${selectedNote || editingId ? "hidden md:block" : "block"} px-6 pb-4`}>
                   <div className="relative">
                     <Search
                       className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
@@ -304,9 +289,7 @@ export default function NotesManger() {
                     />
                     <input
                       type="text"
-                      placeholder={
-                        activeTab === "notes" ? "Search notes" : "Search tasks"
-                      }
+                      placeholder="Search notes"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       className="w-full glass rounded-xl pl-11 pr-4 py-3 text-sm outline-none text-white placeholder-zinc-500 border border-zinc-800/50 focus:border-yellow-500/50 transition-all duration-300"
@@ -314,13 +297,11 @@ export default function NotesManger() {
                   </div>
                 </div>
 
-                {/* Add Note/Task Input - Desktop Only */}
-                <div className="px-6 pb-4 hidden md:block">
+                {/* Add Note Input - Desktop Only */}
+                <div className={`${selectedNote || editingId ? "hidden" : "block"} px-6 pb-4 hidden md:block`}>
                   <input
                     type="text"
-                    placeholder={
-                      activeTab === "notes" ? "Write a note..." : "Write a task..."
-                    }
+                    placeholder="Write a note..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAdd()}
@@ -328,133 +309,61 @@ export default function NotesManger() {
                   />
                 </div>
 
-                {/* Notes/Tasks Grid - No shadows */}
-                <div className="flex-1 overflow-y-auto px-6 pb-6">
-                  {activeTab === "notes" ? (
-                    // Notes View
-                    filteredNotes.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-zinc-500">
-                        <FolderOpen
-                          size={64}
-                          className="mb-4 opacity-20"
-                          strokeWidth={1.5}
-                        />
-                        <p className="text-sm">
-                          {search
-                            ? "No notes found"
-                            : "Start by adding your first note!"}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-4">
-                        {filteredNotes.map((note) => {
-                          const lines = note.text
-                            .split("\n")
-                            .filter((line) => line.trim());
-                          const title = lines[0] || "No title";
-                          const subject = lines.slice(1).join("\n") || "No text";
-
-                          return (
-                            <button
-                              key={note.id}
-                              onClick={() => handleSelectNote(note)}
-                              className="premium-card p-5 text-left h-44 flex flex-col group hover:scale-[1.02] transition-transform duration-200"
-                            >
-                              <h3 className="font-semibold text-base mb-2 line-clamp-1 group-hover:text-yellow-400 transition-colors">
-                                {title}
-                              </h3>
-                              <p className="text-sm text-zinc-400 flex-1 line-clamp-3 mb-2">
-                                {subject}
-                              </p>
-                              <p className="text-xs text-zinc-600">
-                                {formatDate(note.id)}
-                              </p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )
+                {/* Notes Grid */}
+                <div className={`${selectedNote || editingId ? "hidden md:block" : "block"} flex-1 overflow-y-auto px-6 pb-24`}>
+                  {filteredNotes.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-zinc-500">
+                      <FolderOpen
+                        size={64}
+                        className="mb-4 opacity-20"
+                        strokeWidth={1.5}
+                      />
+                      <p className="text-sm">
+                        {search
+                          ? "No notes found"
+                          : "Start by adding your first note!"}
+                      </p>
+                    </div>
                   ) : (
-                    // Tasks View
-                    filteredTasks.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-zinc-500">
-                        <FolderOpen
-                          size={64}
-                          className="mb-4 opacity-20"
-                          strokeWidth={1.5}
-                        />
-                        <p className="text-sm">
-                          {search
-                            ? "No tasks found"
-                            : "Start by adding your first task!"}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {filteredTasks.map((task) => (
-                          <div
-                            key={task.id}
-                            className="premium-card p-4 flex items-center gap-4"
+                    <div className="grid grid-cols-2 gap-4">
+                      {filteredNotes.map((note) => {
+                        const lines = note.text
+                          .split("\n")
+                          .filter((line) => line.trim());
+                        const title = lines[0] || "No title";
+                        const subject = lines.slice(1).join("\n") || "No text";
+
+                        return (
+                          <button
+                            key={note.id}
+                            onClick={() => handleSelectNote(note)}
+                            className="premium-card p-5 text-left h-44 flex flex-col group transition-transform duration-200"
                           >
-                            <button
-                              onClick={() => handleToggle(task.id)}
-                              className="flex-shrink-0"
-                            >
-                              <div
-                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 hover:scale-110 ${
-                                  task.completed
-                                    ? "bg-yellow-500 border-yellow-500"
-                                    : "border-zinc-500 hover:border-yellow-500"
-                                }`}
-                              >
-                                {task.completed && (
-                                  <svg
-                                    className="w-4 h-4 text-black"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={3}
-                                      d="M5 13l4 4L19 7"
-                                    />
-                                  </svg>
-                                )}
-                              </div>
-                            </button>
-                            <span
-                              className={`flex-1 transition-all duration-300 ${
-                                task.completed
-                                  ? "line-through text-zinc-500"
-                                  : "text-white"
-                              }`}
-                            >
-                              {task.title}
-                            </span>
-                            <button
-                              onClick={() => {
-                                removeTask(task.id);
-                                showToast("Task deleted", "error");
-                              }}
-                              className="p-2 hover:bg-zinc-800/70 rounded-lg text-red-500 transition-colors hover:scale-110"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )
+                            <h3 className="font-semibold text-base mb-2 line-clamp-1 group-hover:text-yellow-400 transition-colors">
+                              {title}
+                            </h3>
+                            <p className="text-sm text-zinc-400 flex-1 line-clamp-3 mb-2">
+                              {subject}
+                            </p>
+                            <p className="text-xs text-zinc-600">
+                              {formatDate(note.id)}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </>
             )}
 
-            {/* Bottom Navigation - No blur */}
-            <div className="glass border-t border-zinc-800/50 px-6 py-4  flex items-center justify-around fixed bottom-0 w-full md:static">
+            {/* Bottom Navigation */}
+            <div className="glass border-t border-zinc-800/50 px-6 py-4 flex items-center justify-around fixed bottom-0 w-full md:static pb-6 md:pb-4">
               <button
-                onClick={() => setActiveTab("notes")}
+                onClick={() => {
+                  setActiveTab("notes");
+                  setSelectedDay(null);
+                }}
                 className="flex flex-col items-center gap-1.5 cursor-pointer group"
               >
                 <div className="w-6 h-6 flex items-center justify-center">
@@ -476,35 +385,10 @@ export default function NotesManger() {
               </button>
 
               <button
-                onClick={() => setActiveTab("tasks")}
-                className="flex flex-col items-center gap-1.5 cursor-pointer group"
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <div
-                    className={`w-5 h-5 border-2 rounded-sm relative transition-colors ${
-                      activeTab === "tasks" ? "border-yellow-500" : "border-zinc-500"
-                    }`}
-                  >
-                    <div
-                      className={`absolute inset-1 border-t-2 transition-colors ${
-                        activeTab === "tasks" ? "border-yellow-500" : "border-zinc-500"
-                      }`}
-                    ></div>
-                  </div>
-                </div>
-                <span
-                  className={`text-xs font-medium transition-colors ${
-                    activeTab === "tasks"
-                      ? "text-yellow-500"
-                      : "text-zinc-500 group-hover:text-zinc-400"
-                  }`}
-                >
-                  Tasks
-                </span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("clock")}
+                onClick={() => {
+                  setActiveTab("clock");
+                  setSelectedDay(null);
+                }}
                 className="flex flex-col items-center gap-1.5 cursor-pointer group"
               >
                 <div className="w-6 h-6 flex items-center justify-center">
@@ -532,7 +416,35 @@ export default function NotesManger() {
               </button>
 
               <button
-                onClick={() => setActiveTab("analytics")}
+                onClick={() => {
+                  setActiveTab("tasks");
+                  setSelectedDay(null);
+                }}
+                className="flex flex-col items-center gap-1.5 cursor-pointer group"
+              >
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <div
+                    className={`w-5 h-5 border-2 rounded-sm transition-colors ${
+                      activeTab === "tasks" ? "border-yellow-500" : "border-zinc-500"
+                    }`}
+                  ></div>
+                </div>
+                <span
+                  className={`text-xs font-medium transition-colors ${
+                    activeTab === "tasks"
+                      ? "text-yellow-500"
+                      : "text-zinc-500 group-hover:text-zinc-400"
+                  }`}
+                >
+                  Tasks
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("analytics");
+                  setSelectedDay(null);
+                }}
                 className="flex flex-col items-center gap-1.5 cursor-pointer group"
               >
                 <div className="flex items-end gap-1 h-6">
@@ -561,7 +473,7 @@ export default function NotesManger() {
             </div>
           </div>
 
-          {/* Detail/Edit View - No shadows */}
+          {/* Detail/Edit View */}
           <AnimatePresence>
             {(selectedNote || editingId) && (
               <motion.div
@@ -569,7 +481,7 @@ export default function NotesManger() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.2 }}
-                className="flex flex-col flex-1 bg-gradient-to-br from-black via-zinc-950 to-zinc-900"
+                className="absolute inset-0 md:relative flex flex-col flex-1 bg-gradient-to-br from-black via-zinc-950 to-zinc-900 z-20"
               >
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-zinc-800/50">
@@ -620,7 +532,7 @@ export default function NotesManger() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto ">
+                <div className="flex-1 overflow-y-auto pb-24">
                   <div className="max-w-3xl mx-auto p-8">
                     {editingId ? (
                       <textarea
@@ -647,15 +559,15 @@ export default function NotesManger() {
           </AnimatePresence>
         </div>
 
-        {/* Floating Action Button - No shadow */}
+        {/* Floating Action Button */}
         <AnimatePresence>
-          {activeTab !== "clock" && activeTab !== "analytics" && (
+          {activeTab === "notes" && (
             <motion.button
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
               transition={{ duration: 0.2 }}
-              onClick={handleOpenInputModal}
+              onClick={() => setShowInputModal(true)}
               className="fixed bottom-24 right-6 w-16 h-16 bg-gradient-to-br from-yellow-500 to-yellow-400 rounded-full flex items-center justify-center hover:brightness-110 hover:scale-110 transition-all z-50"
             >
               <Plus size={28} className="text-black" strokeWidth={2.5} />
