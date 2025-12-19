@@ -1,7 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { useTodoStore } from "../stores/NotestMangerStore.jsx"; // ✨ مهم: عدّل المسار حسب مكان الستور
+import { useNotesStore } from "../stores/useNotesStore.jsx";
+import { useTasksStore } from "../stores/useTasksStore.jsx";
+import {useAnalyticsStore} from  "../stores/AnaliticsStore.jsx";
+import {useCalenderStore} from "../stores/CalenderStore.jsx";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,14 +23,19 @@ export const db = getFirestore(app);
    🔥 Sync Part — يعمل تلقائي بمجرد فتح الموقع
 -------------------------------------------------------- */
 onAuthStateChanged(auth, (user) => {
-  const store = useTodoStore.getState();
+  const notesStore = useNotesStore.getState();
+  const tasksStore = useTasksStore.getState();
+  const calenderStore = useCalenderStore.getState();
+  const AnalyticsStore = useAnalyticsStore.getState();
 
   if (user) {
     // 1) خزّن اليوزر في الستور
-    store.setUser(user);
+    notesStore.setUser(user);
+    tasksStore.setUser(user);
 
     // 2) هات بياناته من Firestore
-    store.fetchFromFirestore();
+    notesStore.fetchFromFirestore();
+    tasksStore.fetchFromFirestore();
   }
 });
 

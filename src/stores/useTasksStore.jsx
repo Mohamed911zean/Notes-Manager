@@ -7,143 +7,151 @@ export const useTasksStore = create(
   persist(
     (set, get) => ({
       user: null,
+      tasks: [],
+      isLoading: false,
 
-      currentWeek: null,
+      setUser: async (user) => {
+        set({ user, isLoading: true });
+        
+        if (user) {
+          // تحميل البيانات من Firebase أولاً
+          await get().fetchFromFirestore();
+          get().changeStorageKey(`tasks-storage-${user.uid}`);
+        } else {
+          // مسح البيانات عند تسجيل الخروج
+          set({ tasks: [] });
+          get().changeStorageKey("tasks-storage-guest");
+        }
+        
+        set({ isLoading: false });
+      },
 
-     
+      changeStorageKey: (newKey) => {
+        const state = get();
+        const data = JSON.stringify({ 
+          state: { 
+            tasks: state.tasks 
+          } 
+        });
+        localStorage.setItem(newKey, data);
+      },
 
+      addTask: async (task) => {
+        // Egypt timezone
+        const egyptDate = new Date().toLocaleString("en-US", { timeZone: "Africa/Cairo" });
+        const today = new Date(egyptDate).toLocaleDateString("en-CA");
 
-      
+        if (task.dateISO < today) {
+          console.warn("Cannot add tasks to past days");
+          return;
+        }
 
-      // -----------------------
-      // Week Logic
-      // -----------------------
-
-      initializeWeek: () => {
-        const today = new Date();
-        const start = getWeekStart(today);
-
-        const week = {
-          startISO: start.toISOString().slice(0, 10),
-          days: Array(7)
-            .fill(0)
-            .map((_, i) => {
-              const date = new Date(start);
-              date.setDate(date.getDate() + i);
-              return {
-                dateISO: date.toISOString().slice(0, 10),
-                tasks: [],
-              };
-            }),
+        const newTask = {
+          id: Date.now(),
+          title: task.title,
+          dateISO: task.dateISO,
+          done: false,
         };
 
-        set({ currentWeek: week });
-      },
+        // تحديث الـ state المحلي أولاً للسرعة
+        set((state) => ({ tasks: [...state.tasks, newTask] }));
 
-      getTodayTasks: () => {
-        const { currentWeek } = get();
-        const today = new Date().toISOString().slice(0, 10);
-        return currentWeek?.days.find((d) => d.dateISO === today)?.tasks || [];
-      },
-
-addTask: async (task) => {
-  const { currentWeek } = get();
-  const today = new Date().toISOString().slice(0, 10);
-
-  // منع إضافة المهام لأيام عدت
-  if (task.dateISO < today) {
-    console.warn("Cannot add tasks to past days");
-    return;
-  }
-
-  const updatedWeek = {
-    ...currentWeek,
-    days: currentWeek.days.map((day) =>
-      day.dateISO === task.dateISO
-        ? {
-            ...day,
-            tasks: [
-              ...day.tasks,
-              {
-                id: Date.now(),
-                title: task.title,
-                done: false,
-                carryFrom: null,
-              },
-            ],
+        // ثم تحديث Firebase في الخلفية
+        const { user } = get();
+        if (user) {
+          try {
+            await setDoc(
+              doc(db, "users", user.uid),
+              { tasks: get().tasks },
+              { merge: true }
+            );
+          } catch (error) {
+            console.error("Failed to sync task to Firebase:", error);
+            // استرجاع التغيير في حالة الفشل
+            set((state) => ({
+              tasks: state.tasks.filter((t) => t.id !== newTask.id),
+            }));
           }
-        : day
-    ),
-  };
-
-  set({ currentWeek: updatedWeek });
-  await get().syncToFirestore();
-},
-
-
+        }
+      },
 
       toggleTask: async (id) => {
-        const { currentWeek } = get();
-        const today = new Date().toISOString().slice(0, 10);
-
-        const updatedWeek = {
-          ...currentWeek,
-          days: currentWeek.days.map((day) =>
-            day.dateISO === today
-              ? {
-                  ...day,
-                  tasks: day.tasks.map((task) =>
-                    task.id === id ? { ...task, done: !task.done } : task
-                  ),
-                }
-              : day
+        // حفظ الحالة القديمة للاسترجاع في حالة الفشل
+        const oldTasks = get().tasks;
+        
+        set((state) => ({
+          tasks: state.tasks.map((task) =>
+            task.id === id ? { ...task, done: !task.done } : task
           ),
-        };
+        }));
 
-        set({ currentWeek: updatedWeek });
-        await get().syncToFirestore();
+        const { user } = get();
+        if (user) {
+          try {
+            await setDoc(
+              doc(db, "users", user.uid),
+              { tasks: get().tasks },
+              { merge: true }
+            );
+          } catch (error) {
+            console.error("Failed to sync toggle to Firebase:", error);
+            // استرجاع الحالة القديمة
+            set({ tasks: oldTasks });
+          }
+        }
       },
 
       removeTask: async (id) => {
-        const { currentWeek } = get();
-        const today = new Date().toISOString().slice(0, 10);
+        const oldTasks = get().tasks;
+        
+        set({
+          tasks: get().tasks.filter((task) => task.id !== id),
+        });
 
-        const updatedWeek = {
-          ...currentWeek,
-          days: currentWeek.days.map((day) =>
-            day.dateISO === today
-              ? {
-                  ...day,
-                  tasks: day.tasks.filter((task) => task.id !== id),
-                }
-              : day
-          ),
-        };
-
-        set({ currentWeek: updatedWeek });
-        await get().syncToFirestore();
+        const { user } = get();
+        if (user) {
+          try {
+            await setDoc(
+              doc(db, "users", user.uid),
+              { tasks: get().tasks },
+              { merge: true }
+            );
+          } catch (error) {
+            console.error("Failed to sync removal to Firebase:", error);
+            set({ tasks: oldTasks });
+          }
+        }
       },
 
       syncToFirestore: async () => {
-        const { user, currentWeek } = get();
+        const { user, tasks } = get();
         if (!user) return;
-        await setDoc(
-          doc(db, "users", user.uid),
-          { currentWeek },
-          { merge: true }
-        );
+        
+        try {
+          await setDoc(
+            doc(db, "users", user.uid),
+            { tasks },
+            { merge: true }
+          );
+        } catch (error) {
+          console.error("Failed to sync to Firebase:", error);
+        }
       },
 
       fetchFromFirestore: async () => {
         const { user } = get();
         if (!user) return;
 
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (snap.exists()) {
-          const data = snap.data();
-          set({
-            currentWeek: data.currentWeek || null,
-          });
+        try {
+          const snap = await getDoc(doc(db, "users", user.uid));
+          if (snap.exists()) {
+            const data = snap.data();
+            set({
+              tasks: data.tasks || [],
+            });
+          }
+        } catch (error) {
+          console.error("Failed to fetch from Firebase:", error);
         }
       },
     }),
@@ -151,17 +159,8 @@ addTask: async (task) => {
       name: "tasks-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        currentWeek: state.currentWeek,
+        tasks: state.tasks,
       }),
     }
   )
 );
-
-// helper to get week start (Saturday)
-function getWeekStart(date) {
-  const d = new Date(date);
-  const day = d.getDay(); // 0:Sun .. 6:Sat
-  const diff = (day + 1) % 7; // start Saturday
-  d.setDate(d.getDate() - diff);
-  return d;
-}

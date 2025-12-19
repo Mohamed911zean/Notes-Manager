@@ -17,8 +17,8 @@ export default function Login() {
   useEffect(() => {
     const authCookie = Cookies.get("auth");
     if (authCookie) {
-      navigate("/notes");
-    }
+      navigate("/login");
+    } 
   }, [navigate]);
 
   const handleLogin = async () => {
@@ -36,7 +36,7 @@ export default function Login() {
       Cookies.set("auth", userCredential.user.uid, { expires: 7 });
 
       toast.success("Logged in successfully!");
-      navigate("/notes");
+      navigate("/home");
 
     } catch (error) {
       console.log(error);

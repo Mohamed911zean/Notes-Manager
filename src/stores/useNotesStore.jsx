@@ -7,6 +7,7 @@ export const useNotesStore = create(
     persist(
         (set, get) => ({
             notes: [],
+            filesOpened: [],
             user: null,
 
             // -----------------------
@@ -35,11 +36,12 @@ export const useNotesStore = create(
             //   📌 Sync مع Firestore
             // -----------------------
             syncToFirestore: async () => {
-                const { user, notes } = get();
+                const { user, notes, filesOpened } = get();
                 if (!user) return;
 
                 await setDoc(doc(db, "users", user.uid), {
                     notes,
+                    filesOpened,
                 }, { merge: true });
             },
 
@@ -52,6 +54,7 @@ export const useNotesStore = create(
                     const data = snap.data();
                     set({
                         notes: data.notes || [],
+                        filesOpened: data.filesOpened || [],
                     });
                 }
             },
@@ -84,6 +87,11 @@ export const useNotesStore = create(
                 }));
                 await get().syncToFirestore();
             },
+
+            setFilesOpened: async (files) => {
+                set({ filesOpened: files });
+                await get().syncToFirestore();
+            },
         }),
 
         // -----------------------
@@ -94,6 +102,7 @@ export const useNotesStore = create(
             storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 notes: state.notes,
+                filesOpened: state.filesOpened,
             }),
         }
     )
