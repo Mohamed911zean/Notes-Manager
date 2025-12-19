@@ -3,8 +3,8 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { useNotesStore } from "../stores/useNotesStore.jsx";
 import { useTasksStore } from "../stores/useTasksStore.jsx";
-import {useAnalyticsStore} from  "../stores/AnaliticsStore.jsx";
-import {useCalenderStore} from "../stores/CalenderStore.jsx";
+
+import { useAuthStore } from "../stores/AuthStore.jsx";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -23,20 +23,20 @@ export const db = getFirestore(app);
    🔥 Sync Part — يعمل تلقائي بمجرد فتح الموقع
 -------------------------------------------------------- */
 onAuthStateChanged(auth, (user) => {
+  // Update the main Auth Store first
+  useAuthStore.getState().setUser(user);
+
   const notesStore = useNotesStore.getState();
   const tasksStore = useTasksStore.getState();
-  const calenderStore = useCalenderStore.getState();
-  const AnalyticsStore = useAnalyticsStore.getState();
 
   if (user) {
-    // 1) خزّن اليوزر في الستور
     notesStore.setUser(user);
     tasksStore.setUser(user);
-
-    // 2) هات بياناته من Firestore
     notesStore.fetchFromFirestore();
     tasksStore.fetchFromFirestore();
+  } else {
+    // Clear data on logout
+    notesStore.setUser(null);
+    tasksStore.setUser(null);
   }
 });
-
-export default app;

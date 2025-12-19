@@ -27,7 +27,7 @@ export default function SignUp() {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       toast.success("ًWelcome! Account created successfully!");
-      navigate("/notes");
+      navigate("/home");
 
       setEmail("");
       setPassword("");

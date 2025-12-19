@@ -13,14 +13,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // ⬅️ لو المستخدم مسجل قبل كده نوديه للصفحة على طول
-  useEffect(() => {
-    const authCookie = Cookies.get("auth");
-    if (authCookie) {
-      navigate("/login");
-    } 
-  }, [navigate]);
-
   const handleLogin = async () => {
     if (!email || !password) {
       toast.error("Please fill all fields");
@@ -31,9 +23,6 @@ export default function Login() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-
-      // ⬅️ تخزين الـ Cookie
-      Cookies.set("auth", userCredential.user.uid, { expires: 7 });
 
       toast.success("Logged in successfully!");
       navigate("/home");
