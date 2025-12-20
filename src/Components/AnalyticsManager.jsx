@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useAnalyticsStore, formatTime } from "../stores/AnaliticsStore";
 import { useTasksStore } from "../stores/useTasksStore";
+import { useCalenderStore } from "../stores/CalenderStore";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -41,6 +42,17 @@ ChartJS.register(
 
 export default function AnalyticsPage() {
   const tasks = useTasksStore((state) => state.tasks);
+  const plans = useCalenderStore((state) => state.plans);
+
+  // Combine tasks and plans
+  const allItems = [
+    ...tasks,
+    ...plans.map(plan => ({
+      ...plan,
+      done: plan.completed // Map completed to done for consistency
+    }))
+  ];
+
   const {
     getCurrentMonthInfo,
     getWeeksInCurrentMonth,
@@ -54,10 +66,10 @@ export default function AnalyticsPage() {
 
   const monthInfo = getCurrentMonthInfo();
   const weeks = getWeeksInCurrentMonth();
-  const weekData = getSelectedWeekData(tasks);
-  const monthlyStats = getMonthlyStats(tasks);
-  const taskCompletion = getTaskCompletionData(tasks);
-  const performanceData = getPerformanceRadarData(tasks);
+  const weekData = getSelectedWeekData(allItems);
+  const monthlyStats = getMonthlyStats(allItems);
+  const taskCompletion = getTaskCompletionData(allItems);
+  const performanceData = getPerformanceRadarData(allItems);
 
   // Chart refs
   const barChartRef = useRef(null);
