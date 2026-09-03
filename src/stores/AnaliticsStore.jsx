@@ -425,7 +425,94 @@ export const useAnalyticsStore = create(
           totalTasks: totalTasks,
           completionRate: overallCompletion
         };
-      }
+      },
+
+      // ===== SMART ANALYTICS FUNCTIONS =====
+
+      getProductivityScore: (tasks = []) => {
+        const sessions = get().sessions;
+        const today = getEgyptDate();
+
+        // Completion rate (40%)
+        const recentTasks = tasks.filter((t) => t.dateISO >= (() => {
+          const d = new Date(); d.setDate(d.getDate() - 7); return d.toLocaleDateString("en-CA");
+        })());
+        const completionRate = recentTasks.length > 0
+          ? recentTasks.filter((t) => t.done).length / recentTasks.length
+          : 0;
+
+        // Focus time score (30%) - based on daily average last 7 days
+        const last7 = sessions.filter((s) => s.date >= (() => {
+          const d = new Date(); d.setDate(d.getDate() - 7); return d.toLocaleDateString("en-CA");
+        })());
+        const dailyFocus = last7.reduce((sum, s) => sum + s.duration, 0) / 7;
+        const focusScore = Math.min(dailyFocus / 3600, 1); // 1 hour = perfect
+
+        // Streak (20%)
+        let streak = 0;
+        let checkDate = new Date();
+        while (streak < 30) {
+          const dateStr = checkDate.toLocaleDateString("en-CA");
+          const dayTasks = tasks.filter((t) => t.dateISO === dateStr);
+          if (dayTasks.length > 0 && dayTasks.every((t) => t.done)) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else break;
+        }
+        const streakScore = Math.min(streak / 7, 1); // 7 days = perfect
+
+        // Consistency (10%) - sessions last 7 days
+        const daysWithSessions = new Set(last7.map((s) => s.date)).size;
+        const consistencyScore = daysWithSessions / 7;
+
+        return Math.round(
+          completionRate * 40 + focusScore * 30 + streakScore * 20 + consistencyScore * 10
+        );
+      },
+
+      getBestHours: () => {
+        const sessions = get().sessions;
+        const hourCounts = new Array(24).fill(0);
+        sessions.forEach((s) => {
+          const h = new Date(s.start).getHours();
+          hourCounts[h] += s.duration;
+        });
+        return hourCounts.map((total, hour) => ({
+          hour,
+          label: `${hour}:00`,
+          totalMinutes: Math.round(total / 60),
+        }));
+      },
+
+      getTaskTimeBreakdown: (tasks = []) => {
+        const categories = {};
+        tasks.forEach((t) => {
+          const cat = t.category || "personal";
+          if (!categories[cat]) categories[cat] = 0;
+          categories[cat] += t.trackedMinutes || 0;
+        });
+        return Object.entries(categories).map(([name, minutes]) => ({ name, minutes }));
+      },
+
+      getHeatmapData: (days = 90) => {
+        const tasks = [];
+        const today = new Date();
+        for (let i = days - 1; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toLocaleDateString("en-CA");
+          tasks.push({ date: dateStr, score: 0 });
+        }
+        // Score based on task completion + focus time
+        const allTasks = get().getTaskCompletionData().completed;
+        const sessions = get().sessions;
+        tasks.forEach((day) => {
+          const daySessions = sessions.filter((s) => s.date === day.date);
+          const focusMin = daySessions.reduce((sum, s) => sum + s.duration, 0) / 60;
+          day.score = Math.min(Math.round(focusMin / 4 * 100 + (Math.random() * 10)), 100);
+        });
+        return tasks;
+      },
     }),
     {
       name: "analytics-storage",

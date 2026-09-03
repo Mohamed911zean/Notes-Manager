@@ -5,7 +5,7 @@ import { useNotesStore } from "../stores/useNotesStore.jsx";
 import { useTasksStore } from "../stores/useTasksStore.jsx";
 import { useAnalyticsStore } from "../stores/AnaliticsStore.jsx";
 import { useTimeManagerStore } from "../stores/TimeManagerStore.jsx";
-
+import { useCalenderStore } from "../stores/CalenderStore.jsx";
 import { useAuthStore } from "../stores/AuthStore.jsx";
 
 const firebaseConfig = {
@@ -21,33 +21,32 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-/* -------------------------------------------------------
-   🔥 Sync Part — يعمل تلقائي بمجرد فتح الموقع
--------------------------------------------------------- */
 onAuthStateChanged(auth, (user) => {
-  // Update the main Auth Store first
   useAuthStore.getState().setUser(user);
 
   const notesStore = useNotesStore.getState();
   const tasksStore = useTasksStore.getState();
   const analyticsStore = useAnalyticsStore.getState();
   const timeManagerStore = useTimeManagerStore.getState();
+  const calendarStore = useCalenderStore.getState();
 
   if (user) {
     notesStore.setUser(user);
     tasksStore.setUser(user);
     analyticsStore.setUser(user);
     timeManagerStore.setUser(user);
+    calendarStore.setUser(user);
 
     notesStore.fetchFromFirestore();
     tasksStore.fetchFromFirestore();
     analyticsStore.fetchFromFirestore();
     timeManagerStore.fetchFromFirestore();
+    calendarStore.fetchFromFirestore();
   } else {
-    // Clear data on logout
     notesStore.setUser(null);
     tasksStore.setUser(null);
     analyticsStore.setUser(null);
     timeManagerStore.setUser(null);
+    calendarStore.setUser(null);
   }
 });
